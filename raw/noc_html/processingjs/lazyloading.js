@@ -43,6 +43,8 @@
    * This object will track every sketch that needs to be lazily loaded
    */
   var sketches = {};
+  var runningSketches = {};
+  var pausedSketches = {};
 
   /**
    * Get all canvas elements on the page, and if they indicate that
@@ -94,15 +96,35 @@
    * is to be loaded in is visible on their screen.
    */
   var checkPositions = LazyLoading.checkPositions = function() {
-    var top = 0, bottom = 0;
+    var top = window.pageYOffset;
+    var bottom = top + window.innerHeight;
     for (s in sketches) {
       var sketch = sketches[s];
-      top = window.pageYOffset;
-      bottom = top + window.innerHeight;
       setHeightValues(sketch);
       if ((top <= sketch.top && sketch.top <= bottom) || (top <= sketch.bottom && sketch.bottom <= bottom)) {
         LazyLoading.loadSketch(sketch);
         delete sketches[s];
+        runningSketches.push(s);
+      }
+    }
+    
+    for (s in runningSketches) {
+      var sketch = sketches[s];
+      setHeightValues(sketch);
+      if ((sketch.bottom > top) || (sketch.top < bottom)) {
+        sketch.noLoop();
+        delete runningSketches[s];
+        pausedSketches.push(s);
+      }
+    }
+    
+    for (s in pausedSketches) {
+      var sketch = sketches[s];
+      setHeightValues(sketch);
+      if ((top <= sketch.top && sketch.top <= bottom) || (top <= sketch.bottom && sketch.bottom <= bottom)) {
+        sketch.loop();
+        delete pausedSketches[s];
+        runningSketches.push(s);
       }
     }
   };
